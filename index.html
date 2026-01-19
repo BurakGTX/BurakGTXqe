@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <title>Discord Profil Görüntüleme</title>
-  <style>
-    body { font-family: Arial; text-align: center; padding: 50px; }
-    img { border-radius: 50%; }
-    #profile { display: none; margin-top: 20px; }
-  </style>
+<meta charset="UTF-8">
+<title>Discord Profil</title>
+<style>
+body { font-family: Arial; text-align: center; padding: 50px; }
+img { border-radius: 50%; }
+#profile { display: none; margin-top: 20px; }
+</style>
 </head>
 <body>
 
@@ -25,30 +25,41 @@ const clientId = "1104129270470693035";
 const redirectUri = encodeURIComponent("https://serverburak2.vercel.app/api/discord/callback");
 const scope = "identify email";
 
+// Login butonuna basıldığında OAuth aç
 document.getElementById("loginBtn").onclick = () => {
-  // Discord OAuth sayfasını aç
   window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
 };
 
-// Sayfa yüklendiğinde JSON-Latest'ten kullanıcı bilgisi çek
+// Kullanıcı bilgisi çek
 async function loadUser() {
   try {
-    const res = await fetch("/api/discord/json-latest");
+    // URL'deki code parametresini al
+    const urlParams = new URLSearchParams(window.location.search);
+    const code = urlParams.get("code");
+
+    if (!code) return; // Code yoksa login yapılmamış
+
+    const res = await fetch(`${redirectUri}?code=${code}`);
     if (!res.ok) return;
+
     const data = await res.json();
     const user = data.user;
 
-    // Profil bilgilerini sayfaya yaz
+    // Butonu gizle, profil göster
+    document.getElementById("loginBtn").style.display = "none";
     document.getElementById("avatar").src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`;
     document.getElementById("username").innerText = `${user.username}#${user.discriminator}`;
     document.getElementById("email").innerText = user.email || "Email yok";
     document.getElementById("profile").style.display = "block";
+
+    // URL'deki code parametresini temizle (isteğe bağlı)
+    window.history.replaceState({}, document.title, "/");
   } catch (e) {
     console.log("Kullanıcı bilgisi alınamadı", e);
   }
 }
 
-// Her sayfa açılışında dene
+// Sayfa yüklendiğinde çalıştır
 loadUser();
 </script>
 
