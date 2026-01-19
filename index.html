@@ -2,92 +2,45 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Discord Profil</title>
-<style>
-body { font-family: Arial; text-align: center; padding: 50px; }
-img { border-radius: 50%; margin-top: 20px; }
-#profile { display: none; margin-top: 20px; }
-button { font-size: 18px; padding: 10px 20px; cursor: pointer; }
-</style>
+<title>Discord Callback</title>
 </head>
 <body>
-
-<h1>Discord Profilin</h1>
-<button id="loginBtn">Discord ile Giriş Yap</button>
-
-<div id="profile">
-  <img id="avatar" width="128" height="128"><br>
-  <h2 id="username"></h2>
-  <p id="email"></p>
-</div>
-
 <script>
-const clientId = "1104129270470693035";
-const redirectUri = encodeURIComponent("https://serverburak2.vercel.app/api/discord/callback");
-const scope = "identify email";
+(async () => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const code = urlParams.get("code");
 
-// Login butonu popup açar
-document.getElementById("loginBtn").onclick = () => {
-  const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
-  const width = 500;
-  const height = 700;
-  const left = (screen.width / 2) - (width / 2);
-  const top = (screen.height / 2) - (height / 2);
-
-  const win = window.open(authUrl, "Discord Login", `width=${width},height=${height},top=${top},left=${left}`);
-
-  // Popup kapandığında check et
-  const timer = setInterval(async () => {
-    if (win.closed) {
-      clearInterval(timer);
-      await loadUser();
-    }
-  }, 500);
-};
-
-// Kullanıcı bilgilerini yükle (localStorage veya callback fetch)
-async function loadUser() {
-  try {
-    let user = null;
-
-    // 1️⃣ localStorage kontrol
-    const stored = localStorage.getItem("discordUser");
-    if (stored) {
-      user = JSON.parse(stored);
-    } else {
-      // 2️⃣ callback endpoint'i fetch ile al
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code");
-      if (!code) return;
-
-      const res = await fetch(`/api/discord/callback?code=${code}`);
-      if (!res.ok) return;
-
-      const data = await res.json();
-      user = data.user;
-
-      // localStorage'a kaydet
-      localStorage.setItem("discordUser", JSON.stringify(user));
-
-      // URL'deki code parametresini temizle
-      window.history.replaceState({}, document.title, "/");
-    }
-
-    // Profil bilgilerini DOM'a yaz
-    document.getElementById("loginBtn").style.display = "none";
-    document.getElementById("avatar").src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`;
-    document.getElementById("username").innerText = `${user.username}#${user.discriminator}`;
-    document.getElementById("email").innerText = user.email || "Email yok";
-    document.getElementById("profile").style.display = "block";
-
-  } catch (e) {
-    console.log("Kullanıcı bilgisi alınamadı", e);
+  if (!code) {
+    document.body.innerText = "Code yok!";
+    return;
   }
-}
 
-// Sayfa yüklendiğinde çalıştır
-loadUser();
+  // Access token ve user bilgisi al
+  const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: "1104129270470693035",
+      client_secret: "MsCJkuRC8RrtskIb6_GL0uOWFVNY_JKi",
+      grant_type: "authorization_code",
+      code,
+      redirect_uri: "https://serverburak2.vercel.app/callback.html"
+    })
+  });
+  const tokenData = await tokenRes.json();
+  const accessToken = tokenData.access_token;
+
+  const userRes = await fetch("https://discord.com/api/users/@me", {
+    headers: { Authorization: `Bearer ${accessToken}` }
+  });
+  const user = await userRes.json();
+
+  // Ana sayfaya gönder
+  window.opener.postMessage({ discordUser: user }, "*");
+
+  // Popup kapat
+  window.close();
+})();
 </script>
-
 </body>
 </html>
