@@ -26,38 +26,46 @@ const clientId = "1104129270470693035";
 const redirectUri = encodeURIComponent("https://serverburak2.vercel.app/api/discord/callback");
 const scope = "identify email";
 
-// Login butonu
+// Buton tıklandığında yeni sekme aç
 document.getElementById("loginBtn").onclick = () => {
-  window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+  const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
+  const width = 500;
+  const height = 700;
+  const left = (screen.width / 2) - (width / 2);
+  const top = (screen.height / 2) - (height / 2);
+  
+  // Yeni pencere aç
+  const win = window.open(authUrl, "Discord Login", `width=${width},height=${height},top=${top},left=${left}`);
+
+  // Popup kapandığında check et ve JSON al
+  const timer = setInterval(async () => {
+    if (win.closed) {
+      clearInterval(timer);
+      await loadUser();
+    }
+  }, 500);
 };
 
-// Kullanıcı bilgilerini yükle
+// Kullanıcı bilgilerini yükle (localStorage + callback fetch)
 async function loadUser() {
   try {
     let user = null;
 
-    // 1️⃣ Önce localStorage kontrol et
+    // 1️⃣ localStorage kontrol et
     const stored = localStorage.getItem("discordUser");
     if (stored) {
       user = JSON.parse(stored);
     } else {
-      // 2️⃣ URL'den code parametresi al
-      const urlParams = new URLSearchParams(window.location.search);
-      const code = urlParams.get("code");
-      if (!code) return;
-
-      // 3️⃣ Callback endpoint'ini çağır
-      const res = await fetch(`/api/discord/callback?code=${code}`);
+      // 2️⃣ URL'den code parametresi yok, callback üzerinden çek
+      // Kullanıcı zaten login olduysa JSON-Latest çağırabiliriz
+      const res = await fetch("/api/discord/json-latest");
       if (!res.ok) return;
 
       const data = await res.json();
       user = data.user;
 
-      // 4️⃣ LocalStorage'a kaydet
+      // localStorage'a kaydet
       localStorage.setItem("discordUser", JSON.stringify(user));
-
-      // 5️⃣ URL'deki code parametresini temizle
-      window.history.replaceState({}, document.title, "/");
     }
 
     // Profil bilgilerini DOM'a yaz
