@@ -26,18 +26,17 @@ const clientId = "1104129270470693035";
 const redirectUri = encodeURIComponent("https://serverburak2.vercel.app/api/discord/callback");
 const scope = "identify email";
 
-// Buton tıklandığında yeni sekme aç
+// Login butonu popup açar
 document.getElementById("loginBtn").onclick = () => {
   const authUrl = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
   const width = 500;
   const height = 700;
   const left = (screen.width / 2) - (width / 2);
   const top = (screen.height / 2) - (height / 2);
-  
-  // Yeni pencere aç
+
   const win = window.open(authUrl, "Discord Login", `width=${width},height=${height},top=${top},left=${left}`);
 
-  // Popup kapandığında check et ve JSON al
+  // Popup kapandığında check et
   const timer = setInterval(async () => {
     if (win.closed) {
       clearInterval(timer);
@@ -46,19 +45,22 @@ document.getElementById("loginBtn").onclick = () => {
   }, 500);
 };
 
-// Kullanıcı bilgilerini yükle (localStorage + callback fetch)
+// Kullanıcı bilgilerini yükle (localStorage veya callback fetch)
 async function loadUser() {
   try {
     let user = null;
 
-    // 1️⃣ localStorage kontrol et
+    // 1️⃣ localStorage kontrol
     const stored = localStorage.getItem("discordUser");
     if (stored) {
       user = JSON.parse(stored);
     } else {
-      // 2️⃣ URL'den code parametresi yok, callback üzerinden çek
-      // Kullanıcı zaten login olduysa JSON-Latest çağırabiliriz
-      const res = await fetch("/api/discord/json-latest");
+      // 2️⃣ callback endpoint'i fetch ile al
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get("code");
+      if (!code) return;
+
+      const res = await fetch(`/api/discord/callback?code=${code}`);
       if (!res.ok) return;
 
       const data = await res.json();
@@ -66,6 +68,9 @@ async function loadUser() {
 
       // localStorage'a kaydet
       localStorage.setItem("discordUser", JSON.stringify(user));
+
+      // URL'deki code parametresini temizle
+      window.history.replaceState({}, document.title, "/");
     }
 
     // Profil bilgilerini DOM'a yaz
