@@ -5,8 +5,9 @@
 <title>Discord Profil</title>
 <style>
 body { font-family: Arial; text-align: center; padding: 50px; }
-img { border-radius: 50%; }
+img { border-radius: 50%; margin-top: 20px; }
 #profile { display: none; margin-top: 20px; }
+button { font-size: 18px; padding: 10px 20px; cursor: pointer; }
 </style>
 </head>
 <body>
@@ -25,35 +26,47 @@ const clientId = "1104129270470693035";
 const redirectUri = encodeURIComponent("https://serverburak2.vercel.app/api/discord/callback");
 const scope = "identify email";
 
-// Login butonuna basıldığında OAuth aç
+// Login butonu
 document.getElementById("loginBtn").onclick = () => {
   window.location.href = `https://discord.com/api/oauth2/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=${scope}`;
 };
 
-// Kullanıcı bilgisi çek
+// Kullanıcı bilgilerini yükle
 async function loadUser() {
   try {
-    // URL'deki code parametresini al
-    const urlParams = new URLSearchParams(window.location.search);
-    const code = urlParams.get("code");
+    let user = null;
 
-    if (!code) return; // Code yoksa login yapılmamış
+    // 1️⃣ Önce localStorage kontrol et
+    const stored = localStorage.getItem("discordUser");
+    if (stored) {
+      user = JSON.parse(stored);
+    } else {
+      // 2️⃣ URL'den code parametresi al
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get("code");
+      if (!code) return;
 
-    const res = await fetch(`${redirectUri}?code=${code}`);
-    if (!res.ok) return;
+      // 3️⃣ Callback endpoint'ini çağır
+      const res = await fetch(`/api/discord/callback?code=${code}`);
+      if (!res.ok) return;
 
-    const data = await res.json();
-    const user = data.user;
+      const data = await res.json();
+      user = data.user;
 
-    // Butonu gizle, profil göster
+      // 4️⃣ LocalStorage'a kaydet
+      localStorage.setItem("discordUser", JSON.stringify(user));
+
+      // 5️⃣ URL'deki code parametresini temizle
+      window.history.replaceState({}, document.title, "/");
+    }
+
+    // Profil bilgilerini DOM'a yaz
     document.getElementById("loginBtn").style.display = "none";
     document.getElementById("avatar").src = `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`;
     document.getElementById("username").innerText = `${user.username}#${user.discriminator}`;
     document.getElementById("email").innerText = user.email || "Email yok";
     document.getElementById("profile").style.display = "block";
 
-    // URL'deki code parametresini temizle (isteğe bağlı)
-    window.history.replaceState({}, document.title, "/");
   } catch (e) {
     console.log("Kullanıcı bilgisi alınamadı", e);
   }
