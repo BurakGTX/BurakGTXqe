@@ -6,7 +6,7 @@ export default async function handler(req, res) {
 
   const clientId = process.env.DISCORD_CLIENT_ID;
   const clientSecret = process.env.DISCORD_CLIENT_SECRET;
-  const redirectUri = `https://serverburakgtx.vercel.app/api/discord/callback`;
+  const redirectUri = `https://serverburak2.vercel.app/api/discord/callback`;
 
   try {
     // Token al
@@ -29,10 +29,7 @@ export default async function handler(req, res) {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
-    const user = userRes.data;
-
-    // JSON olarak geri dönebiliriz
-    res.status(200).json({ user });
+    res.status(200).json({ user: userRes.data });
   } catch (err) {
     console.error(err.response?.data || err);
     res.status(500).send('Hata oluştu');
