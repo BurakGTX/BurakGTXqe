@@ -1,5 +1,4 @@
 import axios from "axios";
-import { setLastUser } from "./json-latest.js"; // aynı repo içi import
 
 export default async function handler(req, res) {
   const code = req.query.code;
@@ -24,11 +23,8 @@ export default async function handler(req, res) {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
 
-    // lastUser'ı güncelle
-    setLastUser(userRes.data);
-
-    // JSON veya basit mesaj dönebilirsin
-    res.status(200).send("Giriş başarılı! Artık JSON-Latest ile çekebilirsin.");
+    // Direkt JSON döndür
+    res.status(200).json({ user: userRes.data });
   } catch (err) {
     console.error(err.response?.data || err);
     res.status(500).send("Hata oluştu");
